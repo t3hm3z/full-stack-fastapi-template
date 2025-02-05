@@ -1,0 +1,31 @@
+name: Deploy to Azure Web App
+
+on:
+  push:
+    branches:
+      - main  # Change if your default branch is different
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Build and push Docker image
+      run: |
+        az acr login --name YOUR_ACR_NAME
+        docker build -t YOUR_ACR_NAME.azurecr.io/your-app:latest .
+        docker push YOUR_ACR_NAME.azurecr.io/your-app:latest
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: my-fastapi-app
+        images: myacr1453.azurecr.io/your-app:latest
