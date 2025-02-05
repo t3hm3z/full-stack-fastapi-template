@@ -3,29 +3,42 @@ name: Deploy to Azure Web App
 on:
   push:
     branches:
-      - main  # Change if your default branch is different
+      - main  # Triggers on push to main branch (adjust if your default branch is different)
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
+    # Step 1: Checkout the repository
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # Step 2: Login to Azure using service principal credentials
     - name: Login to Azure
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+    # Step 3: Login to Azure Container Registry
+    - name: Login to Azure Container Registry (ACR)
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}  # ACR login server URL (e.g., myacr1453.azurecr.io)
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+
+    # Step 4: Build Docker image and push to ACR
     - name: Build and push Docker image
       run: |
-        az acr login --name myacr1453  # Log in to your ACR
-        docker build -t myacr1453.azurecr.io/my-fastapi-app:latest ./backend  # Adjust path to Dockerfile
-        docker push myacr1453.azurecr.io/my-fastapi-app:latest
+        # Build the Docker image from the 'backend' folder
+        docker build -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/my-fastapi-app:latest ./backend  # Adjust path to Dockerfile
+        # Push the image to Azure Container Registry
+        docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/my-fastapi-app:latest
 
+    # Step 5: Deploy the Docker image to Azure Web App
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
       with:
-        app-name: my-fastapi-app
-        images: myacr1453.azurecr.io/my-fastapi-app:latest
+        app-name: my-fastapi-app  # Your Web App name
+        images: ${{ secrets.REGISTRY_LOGIN_SERVER }}/my-fastapi-app:latest  # The image URL from ACR
